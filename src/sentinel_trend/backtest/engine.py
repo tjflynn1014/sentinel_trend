@@ -62,21 +62,29 @@ def run_backtest(
         if day in trade_dates:
             decision = next(d for d in decisions if d.trade_date == day)
             if decision.target_asset != current_asset:
-                pre_value = value
-                value = apply_cost(value, cost_bps)
+                value_before = value
+                value_after_sell = apply_cost(value, cost_bps)
                 from_asset = current_asset
                 current_asset = decision.target_asset
-                value = apply_cost(value, cost_bps)
-                cost_amount = pre_value - value
+                value_after_buy = apply_cost(value_after_sell, cost_bps)
+                sell_cost_amount = value_before - value_after_sell
+                buy_cost_amount = value_after_sell - value_after_buy
+                notional_sold = value_before
+                notional_bought = value_after_sell
+                value = value_after_buy
                 trades.append(
                     {
                         "date": day,
                         "from_asset": from_asset,
                         "to_asset": current_asset,
-                        "pre_value": pre_value,
-                        "post_value": value,
+                        "value_before": value_before,
+                        "value_after_sell": value_after_sell,
+                        "value_after_buy": value_after_buy,
                         "cost_bps": cost_bps,
-                        "cost_amount": cost_amount,
+                        "sell_cost_amount": sell_cost_amount,
+                        "buy_cost_amount": buy_cost_amount,
+                        "notional_sold": notional_sold,
+                        "notional_bought": notional_bought,
                     }
                 )
 

@@ -6,7 +6,13 @@ import pytest
 
 from sentinel_trend.backtest.costs import apply_cost
 from sentinel_trend.backtest.engine import run_backtest
-from sentinel_trend.backtest.metrics import cagr, max_drawdown, volatility
+from sentinel_trend.backtest.metrics import (
+    cagr,
+    max_drawdown,
+    turnover_avg_equity,
+    turnover_initial,
+    volatility,
+)
 from sentinel_trend.strategy.trend_sma import TrendDecision
 
 
@@ -57,7 +63,14 @@ def test_run_backtest_dates_and_costs() -> None:
     trade = result.trades[0]
     assert trade["from_asset"] == "BIL"
     assert trade["to_asset"] == "SPY"
-    assert trade["cost_amount"] == pytest.approx(100.0 * (1 - 0.999**2))
+    assert trade["sell_cost_amount"] == pytest.approx(100.0 * 0.001)
+    assert trade["buy_cost_amount"] == pytest.approx(trade["value_after_sell"] * 0.001)
+    assert trade["value_after_buy"] == pytest.approx(100.0 * 0.999**2)
+    assert trade["notional_sold"] == pytest.approx(100.0)
+    assert trade["notional_bought"] == pytest.approx(trade["value_after_sell"])
+
+    expected_initial_turnover = (trade["notional_sold"] + trade["notional_bought"]) / 100.0
+    assert turnover_initial(result.trades, 100.0) == pytest.approx(expected_initial_turnover)
 
 
 def test_max_drawdown() -> None:
@@ -89,3 +102,19 @@ def test_volatility_constant_returns() -> None:
         (date(2023, 1, 5), 103.0301),
     ]
     assert volatility(curve) == pytest.approx(0.0, abs=1e-10)
+
+
+def test_turnover_avg_equity() -> None:
+    equity_curve = [
+        (date(2023, 1, 2), 100.0),
+        (date(2023, 1, 3), 200.0),
+    ]
+    trades = [
+        {
+            "notional_sold": 100.0,
+            "notional_bought": 100.0,
+        }
+    ]
+    average_equity = 150.0
+    expected = 200.0 / average_equity
+    assert turnover_avg_equity(trades, equity_curve) == pytest.approx(expected)

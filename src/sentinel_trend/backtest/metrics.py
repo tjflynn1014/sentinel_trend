@@ -46,8 +46,29 @@ def volatility(equity_curve: Sequence[tuple[date, float]]) -> float:
     return sqrt(var) * sqrt(252.0)
 
 
-def turnover(trades: Sequence[dict], initial_value: float) -> float:
+def _trade_notional(trade: dict) -> float:
+    if "notional_sold" in trade and "notional_bought" in trade:
+        return float(trade["notional_sold"]) + float(trade["notional_bought"])
+    if "value_before" in trade and "value_after_sell" in trade:
+        return float(trade["value_before"]) + float(trade["value_after_sell"])
+    if "pre_value" in trade:
+        return float(trade["pre_value"]) * 2.0
+    raise KeyError("trade does not contain notional fields")
+
+
+def turnover_initial(trades: Sequence[dict], initial_value: float) -> float:
     if initial_value <= 0:
         raise ValueError("initial_value must be positive")
-    total_notional = sum(trade["pre_value"] for trade in trades)
+    total_notional = sum(_trade_notional(trade) for trade in trades)
     return total_notional / initial_value
+
+
+def turnover_avg_equity(
+    trades: Sequence[dict],
+    equity_curve: Sequence[tuple[date, float]],
+) -> float:
+    if not equity_curve:
+        raise ValueError("equity_curve must not be empty")
+    average_equity = sum(value for _, value in equity_curve) / len(equity_curve)
+    total_notional = sum(_trade_notional(trade) for trade in trades)
+    return total_notional / average_equity

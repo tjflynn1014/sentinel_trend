@@ -35,9 +35,10 @@ def write_decision_record(
     lines.append("| Date | From | To | Cost |")
     lines.append("| --- | --- | --- | --- |")
     for trade in result.trades:
+        cost_amount = trade["sell_cost_amount"] + trade["buy_cost_amount"]
         lines.append(
             f"| {_fmt_date(trade['date'])} | {trade['from_asset']} | "
-            f"{trade['to_asset']} | {trade['cost_amount']:.2f} |"
+            f"{trade['to_asset']} | {cost_amount:.2f} |"
         )
     lines.append("")
     lines.append("## Last 10 Equity Points")
